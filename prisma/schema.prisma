@@ -1,0 +1,375 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MediaType {
+  MOVIE
+  TV
+  ANIME
+}
+
+enum WatchProgressStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id                 String          @id @default(cuid())
+  email              String          @unique
+  username           String          @unique
+  passwordHash       String?
+  avatarUrl          String?
+  role               Role            @default(USER)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  watchHistory       WatchHistory[]
+  watchProgress      WatchProgress[]
+  watchlist          Watchlist[]
+  favorites          Favorite[]
+  ratings            Rating[]
+  searchHistory      SearchHistory[]
+  settings           UserSettings?
+}
+
+model UserSettings {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme               String   @default("dark")
+  language            String   @default("en")
+  autoplay            Boolean  @default(true)
+  subtitlesEnabled    Boolean  @default(true)
+  playbackQuality     String   @default("auto")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Genre {
+  id         String     @id @default(cuid())
+  slug       String     @unique
+  name       String
+  mediaType  MediaType?
+  createdAt  DateTime   @default(now())
+  movies     MovieGenre[]
+  tvShows    TVShowGenre[]
+  anime      AnimeGenre[]
+}
+
+model Movie {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  originalTitle   String?
+  overview        String
+  releaseDate     DateTime?
+  runtimeMinutes  Int?
+  rating          Float?
+  posterUrl       String?
+  backdropUrl     String?
+  trailerUrl      String?
+  genres          MovieGenre[]
+  watchHistory    WatchHistory[]
+  watchProgress   WatchProgress[]
+  watchlist       Watchlist[]
+  favorites       Favorite[]
+  ratings         Rating[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([title])
+  @@index([rating])
+}
+
+model TVShow {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  originalTitle   String?
+  overview        String
+  firstAirDate    DateTime?
+  rating          Float?
+  posterUrl       String?
+  backdropUrl     String?
+  trailerUrl      String?
+  genres          TVShowGenre[]
+  seasons         Season[]
+  watchHistory    WatchHistory[]
+  watchProgress   WatchProgress[]
+  watchlist       Watchlist[]
+  favorites       Favorite[]
+  ratings         Rating[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([title])
+  @@index([rating])
+}
+
+model Anime {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  originalTitle   String?
+  overview        String
+  releaseDate     DateTime?
+  rating          Float?
+  posterUrl       String?
+  backdropUrl     String?
+  trailerUrl      String?
+  genres          AnimeGenre[]
+  seasons         AnimeSeason[]
+  watchHistory    WatchHistory[]
+  watchProgress   WatchProgress[]
+  watchlist       Watchlist[]
+  favorites       Favorite[]
+  ratings         Rating[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([title])
+  @@index([rating])
+}
+
+model Season {
+  id          String    @id @default(cuid())
+  tvShowId    String
+  title       String
+  seasonNumber Int
+  overview    String?
+  posterUrl   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tvShow      TVShow    @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+  episodes    Episode[]
+
+  @@unique([tvShowId, seasonNumber])
+}
+
+model AnimeSeason {
+  id          String       @id @default(cuid())
+  animeId     String
+  title       String
+  seasonNumber Int
+  overview    String?
+  posterUrl   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  anime       Anime        @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  episodes    AnimeEpisode[]
+
+  @@unique([animeId, seasonNumber])
+}
+
+model Episode {
+  id              String          @id @default(cuid())
+  seasonId        String
+  title           String
+  overview        String?
+  episodeNumber   Int
+  runtimeMinutes  Int?
+  airDate         DateTime?
+  stillUrl        String?
+  season          Season          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  watchHistory    WatchHistory[]
+  watchProgress   WatchProgress[]
+  ratings         Rating[]
+  sources         PlaybackSource[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([seasonId, episodeNumber])
+  @@index([title])
+}
+
+model AnimeEpisode {
+  id              String          @id @default(cuid())
+  seasonId        String
+  title           String
+  overview        String?
+  episodeNumber   Int
+  runtimeMinutes  Int?
+  airDate         DateTime?
+  stillUrl        String?
+  season          AnimeSeason     @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  watchHistory    WatchHistory[]
+  watchProgress   WatchProgress[]
+  ratings         Rating[]
+  sources         PlaybackSource[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([seasonId, episodeNumber])
+}
+
+model MovieGenre {
+  movieId  String
+  genreId  String
+  movie    Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre    Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([movieId, genreId])
+}
+
+model TVShowGenre {
+  tvShowId String
+  genreId  String
+  tvShow   TVShow @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+  genre    Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([tvShowId, genreId])
+}
+
+model AnimeGenre {
+  animeId  String
+  genreId  String
+  anime    Anime @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  genre    Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([animeId, genreId])
+}
+
+model WatchHistory {
+  id             String   @id @default(cuid())
+  userId         String
+  movieId        String?
+  tvShowId       String?
+  animeId        String?
+  episodeId      String?
+  animeEpisodeId String?
+  watchedAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie          Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  tvShow         TVShow?  @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+  anime          Anime?   @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  episode        Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  animeEpisode   AnimeEpisode? @relation(fields: [animeEpisodeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, watchedAt])
+}
+
+model WatchProgress {
+  id             String                 @id @default(cuid())
+  userId         String
+  movieId        String?
+  tvShowId       String?
+  animeId        String?
+  episodeId      String?
+  animeEpisodeId String?
+  position       Int                    @default(0)
+  duration       Int                    @default(0)
+  percentage     Float                  @default(0)
+  status         WatchProgressStatus    @default(IN_PROGRESS)
+  updatedAt      DateTime               @updatedAt
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie          Movie?                @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  tvShow         TVShow?               @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+  anime          Anime?                @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  episode        Episode?              @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  animeEpisode   AnimeEpisode?         @relation(fields: [animeEpisodeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@unique([userId, tvShowId])
+  @@unique([userId, animeId])
+  @@unique([userId, episodeId])
+  @@unique([userId, animeEpisodeId])
+  @@index([userId, status])
+}
+
+model Watchlist {
+  id         String   @id @default(cuid())
+  userId     String
+  movieId    String?
+  tvShowId   String?
+  animeId    String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie      Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  tvShow     TVShow?  @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+  anime      Anime?   @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@unique([userId, tvShowId])
+  @@unique([userId, animeId])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  movieId    String?
+  tvShowId   String?
+  animeId    String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie      Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  tvShow     TVShow?  @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+  anime      Anime?   @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@unique([userId, tvShowId])
+  @@unique([userId, animeId])
+}
+
+model Rating {
+  id         String   @id @default(cuid())
+  userId     String
+  movieId    String?
+  tvShowId   String?
+  animeId    String?
+  episodeId  String?
+  animeEpisodeId String?
+  score      Float
+  comment    String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie      Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  tvShow     TVShow?  @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+  anime      Anime?   @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  episode    Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  animeEpisode AnimeEpisode? @relation(fields: [animeEpisodeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@unique([userId, tvShowId])
+  @@unique([userId, animeId])
+  @@unique([userId, episodeId])
+  @@unique([userId, animeEpisodeId])
+}
+
+model PlaybackSource {
+  id          String   @id @default(cuid())
+  provider    String
+  sourceUrl   String
+  quality     String
+  language    String   @default("en")
+  subtitles   Json?
+  headers     Json?
+  drmMetadata Json?
+  movieId     String?
+  tvShowId    String?
+  animeId     String?
+  episodeId   String?
+  animeEpisodeId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([provider])
+}
+
+model SearchHistory {
+  id         String   @id @default(cuid())
+  userId     String?
+  query      String
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([query])
+}

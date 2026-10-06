@@ -1,0 +1,5 @@
+module.exports = {
+  eslint: {
+    dirs: ["app", "components", "lib", "types", "hooks"],
+  },
+};
